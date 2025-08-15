@@ -54,15 +54,15 @@ const enemyTypes = [
 
 // Item definitions
 const itemTypes = {
-    'Heart': { color: '#FF69B4', effect: () => { player.health = Math.min(player.maxHealth, player.health + 20); }, description: '+20 Health' },
-    'Speed Boots': { color: '#00BFFF', effect: () => { player.speed += 0.5; }, description: '+0.5 Speed' },
-    'Damage Up': { color: '#FF4500', effect: () => { playerStats.damage += 0.5; }, description: '+0.5 Damage' },
-    'Fire Rate Up': { color: '#FFD700', effect: () => { playerStats.fireRate = Math.max(3, playerStats.fireRate - 2); }, description: 'Faster Shooting' },
-    'Lucky Charm': { color: '#32CD32', effect: () => { playerStats.luck += 1; playerStats.critChance += 0.05; }, description: '+1 Luck, +5% Crit' },
-    'Armor Plate': { color: '#708090', effect: () => { playerStats.armor += 1; }, description: '+1 Armor' },
-    'Max Health Up': { color: '#DC143C', effect: () => { player.maxHealth += 10; player.health += 10; }, description: '+10 Max Health' },
-    'Rapid Fire': { color: '#FF6347', effect: () => { playerStats.fireRate = Math.max(1, playerStats.fireRate - 3); }, description: 'Much Faster Shooting' },
-    'Power Shot': { color: '#800080', effect: () => { playerStats.damage += 1; playerStats.bulletSpeed += 2; }, description: '+1 Damage, Faster Bullets' }
+    'Heart': { emoji: '❤️', color: '#FF69B4', effect: () => { player.health = Math.min(player.maxHealth, player.health + 20); }, description: '+20 Health' },
+    'Speed Boots': { emoji: '👟', color: '#00BFFF', effect: () => { player.speed += 0.5; }, description: '+0.5 Speed' },
+    'Damage Up': { emoji: '⚔️', color: '#FF4500', effect: () => { playerStats.damage += 0.5; }, description: '+0.5 Damage' },
+    'Fire Rate Up': { emoji: '🔥', color: '#FFD700', effect: () => { playerStats.fireRate = Math.max(3, playerStats.fireRate - 2); }, description: 'Faster Shooting' },
+    'Lucky Charm': { emoji: '🍀', color: '#32CD32', effect: () => { playerStats.luck += 1; playerStats.critChance += 0.05; }, description: '+1 Luck, +5% Crit' },
+    'Armor Plate': { emoji: '🛡️', color: '#708090', effect: () => { playerStats.armor += 1; }, description: '+1 Armor' },
+    'Max Health Up': { emoji: '💪', color: '#DC143C', effect: () => { player.maxHealth += 10; player.health += 10; }, description: '+10 Max Health' },
+    'Rapid Fire': { emoji: '💨', color: '#FF6347', effect: () => { playerStats.fireRate = Math.max(1, playerStats.fireRate - 3); }, description: 'Much Faster Shooting' },
+    'Power Shot': { emoji: '💥', color: '#800080', effect: () => { playerStats.damage += 1; playerStats.bulletSpeed += 2; }, description: '+1 Damage, Faster Bullets' }
 };
 
 // Initialize game
@@ -208,8 +208,8 @@ function generateFloor() {
             width: 25,
             height: 20,
             opened: false,
-            color: '#8B4513',
-            lockColor: '#FFD700'
+            emoji: '📦',
+            openEmoji: '📭'
         });
     }
     
@@ -577,6 +577,10 @@ function render() {
         ctx.beginPath();
         ctx.arc(player.x, player.y, player.radius + 3, 0, Math.PI * 2);
         ctx.stroke();
+        
+          // Add shield emoji
+        ctx.font = '16px Arial';
+        ctx.fillText('🛡️', player.x + player.radius, player.y - player.radius);
     }
     
     // Draw pickup messages
