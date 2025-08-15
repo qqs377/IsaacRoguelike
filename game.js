@@ -375,11 +375,28 @@ function showLevelUpScreen() {
         `;
         
         cardElement.addEventListener('click', () => {
-            selectUpgrade(card);
+            // Remove highlight from all cards
+            document.querySelectorAll('.upgrade-card').forEach(el => el.classList.remove('selected'));
+            // Highlight the clicked card
+            cardElement.classList.add('selected');
+            selectCard(card);
         });
         
         cardContainer.appendChild(cardElement);
     });
+
+    // Create Confirm button
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = "Confirm Selection";
+    confirmBtn.className = 'confirm-button';
+    confirmBtn.addEventListener('click', () => {
+        if (!selectedCard) {
+            alert("Please select a card first!");
+            return;
+        }
+        selectUpgrade(selectedCard);
+    });
+    cardContainer.appendChild(confirmBtn);
     
     levelUpScreen.style.display = 'flex';
 }
