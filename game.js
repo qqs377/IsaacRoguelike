@@ -362,6 +362,8 @@ function showLevelUpScreen() {
     
     // Clear previous cards
     cardContainer.innerHTML = '';
+
+    let selectedCard = null;
     
     // Create card elements
     cardOptions.forEach((card, index) => {
