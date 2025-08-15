@@ -663,7 +663,7 @@ async function submitScore() {
     
     try {
         const { data, error } = await supabase
-            .from('leaderboard')
+            .from('isaac_leaderboard')
             .insert([
                 {
                     player_name: playerName,
@@ -689,7 +689,7 @@ async function showLeaderboard() {
     
     try {
         const { data, error } = await supabase
-            .from('leaderboard')
+            .from('isaac_leaderboard')
             .select('*')
             .order('score', { ascending: false })
             .limit(10);
