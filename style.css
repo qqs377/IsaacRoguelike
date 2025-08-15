@@ -185,6 +185,35 @@ body {
     border-top: 1px solid #444;
 }
 
+/* Selected card style */
+.upgrade-card.selected {
+    border-color: #ffaa00;
+    box-shadow: 0 0 15px rgba(255, 170, 0, 0.6);
+    background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+    transform: translateY(-3px);
+}
+
+/* Confirm button style */
+.confirm-button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    font-size: 1em;
+    font-weight: bold;
+    color: #ffaa00;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border: 2px solid #555;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.confirm-button:hover {
+    border-color: #ffaa00;
+    background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+    box-shadow: 0 8px 15px rgba(255, 170, 0, 0.3);
+    transform: translateY(-2px);
+}
+
 .game-over-screen, .leaderboard, .menu-screen {
     position: absolute;
     top: 0;
