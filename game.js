@@ -381,7 +381,7 @@ function showLevelUpScreen() {
             document.querySelectorAll('.upgrade-card').forEach(el => el.classList.remove('selected'));
             // Highlight the clicked card
             cardElement.classList.add('selected');
-            selectCard(card);
+            selectedCard(card);
         });
         
         cardContainer.appendChild(cardElement);
