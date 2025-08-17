@@ -688,6 +688,8 @@ function showConfirmationButton() {
         confirmBtn.textContent = 'Confirm Selection';
         confirmBtn.style.cssText = `
             display: block;
+            position: relative;
+            margin-top: 20px;
             margin: 20px auto 0; /* centers horizontally */
             padding: 12px 24px;
             font-size: 16px;
