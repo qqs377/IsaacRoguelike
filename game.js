@@ -578,22 +578,21 @@ function showLevelUpScreen() {
     const availableCards = upgradeCards.filter(card => !removedCards.has(card.id));
     const cardOptions = [];
     
-    for (let i = 0; i < 5; i++) {
-        if (availableCards.length === 0) break;
-        
-        // Get random rarity based on weights
-        const targetRarity = getRandomRarity();
-        let possibleCards = availableCards.filter(card => card.rarity === targetRarity);
-        
-        // Fallback to any available card if no cards of target rarity
-        if (possibleCards.length === 0) {
-            possibleCards = availableCards;
+    // Create weighted card pool
+    const weightedCards = [];
+    availableCards.forEach(card => {
+        const weight = rarityWeights[card.rarity];
+        for (let w = 0; w < weight * 10; w++) { // Multiply by 10 to work with decimals
+            weightedCards.push(card);
         }
-        
-        if (possibleCards.length === 0) break;
-        
-        const randomIndex = Math.floor(Math.random() * possibleCards.length);
-        const baseCard = possibleCards[randomIndex];
+    });
+
+    for (let i = 0; i < 5; i++) {
+        if (weightedCards.length === 0) break;
+    
+        // Pick random card from weighted pool
+        const randomIndex = Math.floor(Math.random() * weightedCards.length);
+        const baseCard = weightedCards[randomIndex];
         
         // Pick a random variant
         const randomVariant = baseCard.variants[Math.floor(Math.random() * baseCard.variants.length)];
