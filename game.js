@@ -179,11 +179,11 @@ const upgradeCards = [
     },
     
     // Legendary Special Ammo (removed after selection)
-    {
+{
         id: 'explosive_ammo',
         name: 'Explosive Rounds',
         icon: '🔥',
-        rarity: 'legendary',
+        rarity: 'epic',
         description: 'Bullets explode on impact',
         removeAfterUse: true,
         variants: [
@@ -198,7 +198,7 @@ const upgradeCards = [
         id: 'piercing_ammo',
         name: 'Piercing Shots',
         icon: '🎯',
-        rarity: 'legendary',
+        rarity: 'epic',
         description: 'Bullets pierce through enemies',
         removeAfterUse: true,
         variants: [
@@ -213,7 +213,7 @@ const upgradeCards = [
         id: 'rapid_ammo',
         name: 'Rapid Fire',
         icon: '💨',
-        rarity: 'legendary',
+        rarity: 'epic',
         description: 'Shoots multiple bullets',
         removeAfterUse: true,
         variants: [
@@ -263,6 +263,34 @@ const upgradeCards = [
             { name: 'Evasion', effect: () => { 
                 addActiveSkill('dodge', '👻', 'Evasion: 5% chance to dodge attacks');
             }, display: '5% chance to dodge attacks' }
+        ]
+    },
+    
+    // New Legendary Items (same rarity as special skills)
+    {
+        id: 'time_dilation',
+        name: 'Time Dilation',
+        icon: '⏰',
+        rarity: 'legendary',
+        description: 'Slows down time during combat',
+        removeAfterUse: true,
+        variants: [
+            { name: 'Time Dilation', effect: () => { 
+                addActiveSkill('time_dilation', '⏰', 'Time Dilation: Enemies move 20% slower');
+            }, display: 'Enemies move 20% slower' }
+        ]
+    },
+    {
+        id: 'berserker_rage',
+        name: 'Berserker Rage',
+        icon: '😡',
+        rarity: 'legendary',
+        description: 'More damage when low on health',
+        removeAfterUse: true,
+        variants: [
+            { name: 'Berserker Rage', effect: () => { 
+                addActiveSkill('berserker_rage', '😡', 'Berserker Rage: +50% damage when below 30% health');
+            }, display: '+50% damage when below 30% health' }
         ]
     }
 ];
@@ -404,20 +432,29 @@ function autoShoot() {
         
         // Handle different bullet types
         if (playerStats.bulletType === 'rapid') {
-            // Shoot 3 bullets in a spread
+            // Shoot 3 bullets in a spread - each inherits the current bullet type effects
             for (let i = -1; i <= 1; i++) {
                 const spreadAngle = angle + (i * 0.2);
-                createBullet(spreadAngle, isCrit);
+                createBullet(spreadAngle, isCrit, true); // Pass true to indicate this is from rapid fire
             }
         } else {
-            createBullet(angle, isCrit);
+            createBullet(angle, isCrit, false);
         }
         
         lastShotTime = currentTime;
     }
-} 
+}
 
-function createBullet(angle, isCrit) {
+function createBullet(angle, isCrit, isRapidFire = false) {
+    // Determine the actual bullet type - if rapid fire, maintain other special properties
+    let actualBulletType = playerStats.bulletType;
+    if (isRapidFire && playerStats.bulletType === 'rapid') {
+        // Check if we had a previous bullet type before rapid fire
+        // For now, we'll keep it as rapid, but each bullet can still be piercing/explosive
+        // if those were active before rapid fire was acquired
+        actualBulletType = 'rapid';
+    }
+    
     const bullet = {
         x: player.x,
         y: player.y,
@@ -427,9 +464,12 @@ function createBullet(angle, isCrit) {
         life: 100,
         damage: playerStats.damage * (isCrit ? 2 : 1),
         isCrit: isCrit,
-        type: playerStats.bulletType,
+        type: actualBulletType,
         color: getBulletColor(isCrit),
-        pierced: 0
+        pierced: 0,
+        // Add properties to track combined effects
+        canPierce: activeSkills.find(skill => skill.id === 'piercing') !== undefined,
+        canExplode: activeSkills.find(skill => skill.id === 'explosive') !== undefined
     };
     
     bullets.push(bullet);
@@ -472,7 +512,7 @@ const rarityWeights = {
     common: 50,
     rare: 25,
     epic: 15,
-    legendary: 10
+    legendary: 5
 };
 
 function getRandomRarity() {
@@ -719,16 +759,23 @@ function checkCollisions() {
                 // Create hit particles
                 createParticles(enemy.x, enemy.y, bullet.isCrit ? '#FF0000' : enemy.color);
                 
-                // Handle special bullet effects
-                if (bullet.type === 'explosive') {
+                // Handle special bullet effects - can now combine
+                let removeBullet = true;
+                
+                if (bullet.canExplode || bullet.type === 'explosive') {
                     // Explosive bullets create explosion
                     createExplosion(bullet.x, bullet.y);
-                    bullets.splice(bulletIndex, 1);
-                } else if (bullet.type === 'piercing' && bullet.pierced < 3) {
-                    // Piercing bullets can hit multiple enemies
-                    bullet.pierced++;
-                } else {
-                    // Normal bullets are removed after hit
+                }
+                
+                if (bullet.canPierce || bullet.type === 'piercing') {
+                    if (bullet.pierced < 3) {
+                        // Piercing bullets can hit multiple enemies
+                        bullet.pierced++;
+                        removeBullet = false; // Don't remove piercing bullets until they've pierced enough
+                    }
+                }
+                
+                if (removeBullet) {
                     bullets.splice(bulletIndex, 1);
                 }
                 
@@ -736,7 +783,7 @@ function checkCollisions() {
                 if (enemy.health <= 0) {
                     score += enemy.points;
                     enemiesKilled++;
-                    gainXP(enemy.xp); // Gain XP from killed enemy
+                    gainXP(enemy.xp);
                     
                     // Lifesteal skill: heal on kill
                     if (activeSkills.find(skill => skill.id === 'lifesteal')) {
