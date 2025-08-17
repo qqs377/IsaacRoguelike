@@ -436,7 +436,7 @@ function nextFloor() {
     generateFloor();
 }
 
-// Manual shooting function - replaces autoShoot
+// FIXED: Manual shooting function with proper bullet combination logic
 function shoot() {
     const currentTime = Date.now();
     if (currentTime - lastShotTime < playerStats.fireRate * 16.67) return;
@@ -444,29 +444,28 @@ function shoot() {
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     const isCrit = Math.random() < playerStats.critChance;
     
-    // Handle different bullet types
-    if (playerStats.bulletType === 'rapid') {
-        // Shoot 3 bullets in a spread - each inherits the current bullet type effects
+    // Check if we have rapid fire skill
+    const hasRapidFire = activeSkills.find(skill => skill.id === 'rapid') !== undefined;
+    
+    if (hasRapidFire) {
+        // Shoot 3 bullets in a spread - each inherits ALL active bullet properties
         for (let i = -1; i <= 1; i++) {
             const spreadAngle = angle + (i * 0.2);
-            createBullet(spreadAngle, isCrit, true); // Pass true to indicate this is from rapid fire
+            createBullet(spreadAngle, isCrit);
         }
     } else {
-        createBullet(angle, isCrit, false);
+        createBullet(angle, isCrit);
     }
     
     lastShotTime = currentTime;
 }
 
-function createBullet(angle, isCrit, isRapidFire = false) {
-    // Determine the actual bullet type - if rapid fire, maintain other special properties
-    let actualBulletType = playerStats.bulletType;
-    if (isRapidFire && playerStats.bulletType === 'rapid') {
-        // Check if we had a previous bullet type before rapid fire
-        // For now, we'll keep it as rapid, but each bullet can still be piercing/explosive
-        // if those were active before rapid fire was acquired
-        actualBulletType = 'rapid';
-    }
+// FIXED: Create bullet function with proper combination of all active bullet types
+function createBullet(angle, isCrit) {
+    // Check for all active bullet skills
+    const hasPiercing = activeSkills.find(skill => skill.id === 'piercing') !== undefined;
+    const hasExplosive = activeSkills.find(skill => skill.id === 'explosive') !== undefined;
+    const hasRapid = activeSkills.find(skill => skill.id === 'rapid') !== undefined;
     
     const bullet = {
         x: player.x,
@@ -477,26 +476,39 @@ function createBullet(angle, isCrit, isRapidFire = false) {
         life: 100,
         damage: playerStats.damage * (isCrit ? 2 : 1),
         isCrit: isCrit,
-        type: actualBulletType,
-        color: getBulletColor(isCrit),
+        color: getBulletColor(isCrit, hasPiercing, hasExplosive, hasRapid),
         pierced: 0,
-        // Add properties to track combined effects - PRESERVED PIERCING LOGIC
-        canPierce: activeSkills.find(skill => skill.id === 'piercing') !== undefined,
-        canExplode: activeSkills.find(skill => skill.id === 'explosive') !== undefined
+        // FIXED: Now properly combines all bullet effects
+        canPierce: hasPiercing,
+        canExplode: hasExplosive,
+        isRapidFire: hasRapid
     };
     
     bullets.push(bullet);
 }
 
-function getBulletColor(isCrit) {
+// FIXED: Get bullet color based on all active effects
+function getBulletColor(isCrit, hasPiercing, hasExplosive, hasRapid) {
     if (isCrit) return '#FF0000';
     
-    switch (playerStats.bulletType) {
-        case 'explosive': return '#FF8800';
-        case 'piercing': return '#00FF88';
-        case 'rapid': return '#8800FF';
-        default: return '#FFD700';
+    // Combine colors when multiple effects are active
+    if (hasExplosive && hasPiercing && hasRapid) {
+        return '#FFAA44'; // Mixed orange-yellow for all three
+    } else if (hasExplosive && hasPiercing) {
+        return '#FF4444'; // Red-orange for explosive + piercing
+    } else if (hasExplosive && hasRapid) {
+        return '#AA44FF'; // Purple-orange for explosive + rapid
+    } else if (hasPiercing && hasRapid) {
+        return '#44AAFF'; // Blue-green for piercing + rapid
+    } else if (hasExplosive) {
+        return '#FF8800'; // Orange for explosive
+    } else if (hasPiercing) {
+        return '#00FF88'; // Green for piercing
+    } else if (hasRapid) {
+        return '#8800FF'; // Purple for rapid
     }
+    
+    return '#FFD700'; // Default gold
 }
 
 function gainXP(amount) {
@@ -728,7 +740,6 @@ function update() {
     if (gameState !== 'playing') return;
     
     updatePlayer();
-    // REMOVED autoShoot() call - now using manual shooting
     updateBullets();
     updateEnemies();
     updateParticles();
@@ -804,14 +815,20 @@ function updateBullets() {
 
 function updateEnemies() {
     enemies.forEach(enemy => {
+        // Time dilation effect - slow down enemies
+        let speedMultiplier = 1;
+        if (activeSkills.find(skill => skill.id === 'time_dilation')) {
+            speedMultiplier = 0.8; // 20% slower
+        }
+        
         // Move towards player
         const dx = player.x - enemy.x;
         const dy = player.y - enemy.y;
         const distance = Math.hypot(dx, dy);
         
         if (distance > 0) {
-            enemy.x += (dx / distance) * enemy.speed;
-            enemy.y += (dy / distance) * enemy.speed;
+            enemy.x += (dx / distance) * enemy.speed * speedMultiplier;
+            enemy.y += (dy / distance) * enemy.speed * speedMultiplier;
         }
         
         // Reset hit color
@@ -831,6 +848,7 @@ function updateParticles() {
     });
 }
 
+// FIXED: Collision detection with proper combined bullet effects
 function checkCollisions() {
     // Bullet-enemy collisions
     bullets.forEach((bullet, bulletIndex) => {
@@ -840,28 +858,34 @@ function checkCollisions() {
             const distance = Math.hypot(dx, dy);
             
             if (distance < bullet.radius + enemy.radius) {
+                // Apply berserker rage damage bonus
+                let finalDamage = bullet.damage;
+                if (activeSkills.find(skill => skill.id === 'berserker_rage')) {
+                    if (player.health / player.maxHealth < 0.3) {
+                        finalDamage *= 1.5; // +50% damage when below 30% health
+                    }
+                }
+                
                 // Hit enemy
-                enemy.health -= bullet.damage;
+                enemy.health -= finalDamage;
                 enemy.lastHit = Date.now();
                 enemy.hitColor = bullet.isCrit ? '#FF0000' : '#FFFFFF';
                 
                 // Create hit particles
                 createParticles(enemy.x, enemy.y, bullet.isCrit ? '#FF0000' : enemy.color);
                 
-                // Handle special bullet effects - can now combine - PRESERVING PIERCING FOR ALL BULLETS
+                // FIXED: Handle combined bullet effects properly
                 let removeBullet = true;
                 
-                if (bullet.canExplode || bullet.type === 'explosive') {
-                    // Explosive bullets create explosion
+                // Explosive effect
+                if (bullet.canExplode) {
                     createExplosion(bullet.x, bullet.y);
                 }
                 
-                if (bullet.canPierce || bullet.type === 'piercing') {
-                    if (bullet.pierced < 3) {
-                        // Piercing bullets can hit multiple enemies
-                        bullet.pierced++;
-                        removeBullet = false; // Don't remove piercing bullets until they've pierced enough
-                    }
+                // Piercing effect - bullets continue through enemies
+                if (bullet.canPierce && bullet.pierced < 3) {
+                    bullet.pierced++;
+                    removeBullet = false; // Don't remove piercing bullets until they've pierced enough
                 }
                 
                 if (removeBullet) {
@@ -985,7 +1009,7 @@ function render() {
         ctx.fill();
         
         // Special effects for different bullet types
-        if (bullet.isCrit || bullet.type !== 'normal') {
+        if (bullet.isCrit || bullet.canPierce || bullet.canExplode || bullet.isRapidFire) {
             ctx.shadowBlur = 10;
             ctx.shadowColor = bullet.color;
             ctx.beginPath();
