@@ -88,15 +88,16 @@ body {
     border-radius: 5px;
 }
 
-/* Active Skills Display */
+/* Active Skills Display - MOVED TO LEFT */
 .active-skills {
     position: absolute;
     top: 10px;
-    right: 10px;
+    left: 10px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 5px;
     z-index: 15;
+    margin-top: 120px; /* Below health/xp bars */
 }
 
 .skill-icon {
@@ -120,8 +121,9 @@ body {
 
 .skill-icon .tooltip {
     position: absolute;
-    right: 45px;
-    top: 0;
+    bottom: 45px; /* Changed to show above the icon */
+    left: 50%;
+    transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.9);
     color: white;
     padding: 8px 12px;
@@ -138,7 +140,7 @@ body {
     opacity: 1;
 }
 
-/* Level Up Screen */
+/* Level Up Screen - FIXED LAYOUT */
 .level-up-screen {
     position: absolute;
     top: 0;
@@ -154,7 +156,7 @@ body {
 
 .level-up-content {
     background: #333;
-    padding: 30px;
+    padding: 30px 30px 80px 30px; /* Extra bottom padding for confirm button */
     border-radius: 15px;
     text-align: center;
     border: 3px solid #ffaa00;
@@ -162,6 +164,8 @@ body {
     max-width: 90vw;
     max-height: 90vh;
     overflow-y: auto;
+    position: relative;
+    min-height: 500px; /* Consistent height */
 }
 
 .level-up-content h2 {
@@ -183,6 +187,7 @@ body {
     justify-content: center;
     flex-wrap: wrap;
     margin-top: 20px;
+    min-height: 300px; /* Prevent layout shift */
 }
 
 .upgrade-card {
@@ -244,6 +249,13 @@ body {
     box-shadow: 0 10px 20px rgba(255, 102, 0, 0.5);
 }
 
+/* SELECTED CARD STATE */
+.upgrade-card.selected {
+    border: 3px solid #4CAF50 !important;
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.6) !important;
+    transform: scale(1.02) translateY(-5px) !important;
+}
+
 .upgrade-card .card-icon {
     font-size: 3em;
     margin-bottom: 15px;
@@ -285,6 +297,31 @@ body {
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid #444;
+}
+
+/* CONFIRMATION BUTTON - FIXED POSITION */
+#confirmUpgrade {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+    background: #4CAF50;
+    color: white;
+    border: 2px solid #45a049;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    z-index: 300;
+    transition: all 0.2s ease;
+}
+
+#confirmUpgrade:hover {
+    background: #45a049;
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
 }
 
 .game-over-screen, .leaderboard, .menu-screen {
@@ -452,6 +489,12 @@ input:focus {
         padding: 10px;
         flex-direction: column;
         align-items: stretch;
+    }
+    
+    .active-skills {
+        position: relative;
+        margin-top: 10px;
+        justify-content: center;
     }
     
     .card-container {
