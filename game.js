@@ -612,6 +612,23 @@ function showLevelUpScreen() {
             <div class="card-effect">${card.effectDisplay}</div>
         `;
         
+        // Add CSS for selected state
+        const style = document.createElement('style');
+        if (!document.getElementById('cardSelectionStyles')) {
+            style.id = 'cardSelectionStyles';
+            style.textContent = `
+                .upgrade-card.selected {
+                    border: 3px solid #4CAF50 !important;
+                    box-shadow: 0 0 20px rgba(76, 175, 80, 0.6) !important;
+                    transform: scale(1.05) !important;
+                }
+                .upgrade-card {
+                    transition: all 0.3s ease;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
         cardElement.addEventListener('click', () => {
             selectUpgrade(card);
         });
@@ -622,18 +639,71 @@ function showLevelUpScreen() {
     levelUpScreen.style.display = 'flex';
 }
 
+let selectedCard = null;
+
 function selectUpgrade(card) {
+    selectedCard = card;
+    
+    // Highlight selected card and show confirmation
+    const allCards = document.querySelectorAll('.upgrade-card');
+    allCards.forEach(cardEl => cardEl.classList.remove('selected'));
+    
+    // Find and highlight the clicked card
+    allCards.forEach(cardEl => {
+        if (cardEl.querySelector('.card-title').textContent === card.displayName) {
+            cardEl.classList.add('selected');
+        }
+    });
+    
+    // Show or update confirmation button
+    showConfirmationButton();
+}
+
+function showConfirmationButton() {
+    let confirmBtn = document.getElementById('confirmUpgrade');
+    if (!confirmBtn) {
+        confirmBtn = document.createElement('button');
+        confirmBtn.id = 'confirmUpgrade';
+        confirmBtn.textContent = 'Confirm Selection';
+        confirmBtn.style.cssText = `
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+            background: #4CAF50;
+            color: white;
+            border: 2px solid #45a049;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        `;
+        confirmBtn.addEventListener('click', confirmUpgrade);
+        document.getElementById('levelUpScreen').appendChild(confirmBtn);
+    }
+    confirmBtn.style.display = 'block';
+}
+
+function confirmUpgrade() {
+    if (!selectedCard) return;
+    
     // Apply the upgrade effect
-    card.effect();
+    selectedCard.effect();
     
     // Remove card from pool if it's a special card
-    if (card.removeAfterUse) {
-        removedCards.add(card.id);
+    if (selectedCard.removeAfterUse) {
+        removedCards.add(selectedCard.id);
     }
     
     // Hide level up screen and resume game
     document.getElementById('levelUpScreen').style.display = 'none';
     gameState = 'playing';
+    
+    // Clean up
+    selectedCard = null;
+    const confirmBtn = document.getElementById('confirmUpgrade');
+    if (confirmBtn) {
+        confirmBtn.style.display = 'none';
+    }
     
     // Update UI to reflect changes
     updateUI();
