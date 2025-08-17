@@ -675,10 +675,8 @@ function showConfirmationButton() {
         confirmBtn.id = 'confirmUpgrade';
         confirmBtn.textContent = 'Confirm Selection';
         confirmBtn.style.cssText = `
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
+            display: block;
+            margin: 20px auto 0; /* centers horizontally */
             padding: 12px 24px;
             font-size: 16px;
             font-family: 'Courier New', monospace;
