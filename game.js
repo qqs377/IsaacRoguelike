@@ -127,8 +127,8 @@ const upgradeCards = [
         rarity: 'rare',
         description: 'Critical hit improvements',
         variants: [
-            { name: 'Sharp Eye', effect: () => { playerStats.critChance += 0.10; }, display: '+10% Critical Chance' },
-            { name: 'Deadly Aim', effect: () => { playerStats.critChance += 0.07; playerStats.damage += 0.4; }, display: '+7% Crit, +0.4 Damage' }
+            { name: 'Sharp Eye', effect: () => { playerStats.critChance += 0.008; }, display: '+0.8% Critical Chance' },
+            { name: 'Deadly Aim', effect: () => { playerStats.critChance += 0.005; playerStats.damage += 0.4; }, display: '+0.5% Crit, +0.4 Damage' }
         ]
     },
     {
@@ -173,8 +173,8 @@ const upgradeCards = [
         rarity: 'epic',
         description: 'Advanced critical abilities',
         variants: [
-            { name: 'Critical Master', effect: () => { playerStats.critChance += 0.15; playerStats.bulletSpeed += 2; }, display: '+15% Crit, +2 Bullet Speed' },
-            { name: 'Lethal Precision', effect: () => { playerStats.critChance += 0.12; playerStats.damage += 0.6; }, display: '+12% Crit, +0.6 Damage' }
+            { name: 'Critical Master', effect: () => { playerStats.critChance += 0.012; playerStats.bulletSpeed += 2; }, display: '+1.2% Crit, +2 Bullet Speed' },
+            { name: 'Lethal Precision', effect: () => { playerStats.critChance += 0.009; playerStats.damage += 0.6; }, display: '+0.9% Crit, +0.6 Damage' }
         ]
     },
     
@@ -395,9 +395,9 @@ function resetGame() {
 function generateFloor() {
     enemies = [];
     
-    const enemyCount = Math.min(5 + floor * 2, 15);
+    const enemyCount = Math.min(5 + floor * 2, 20); // Increased max enemies
     
-    // Generate enemies
+    // Generate enemies with scaling difficulty
     for (let i = 0; i < enemyCount; i++) {
         const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
         let x, y;
@@ -408,16 +408,21 @@ function generateFloor() {
             y = Math.random() * (canvas.height - enemyType.radius * 2) + enemyType.radius;
         } while (Math.hypot(x - player.x, y - player.y) < 100);
         
+        // Scale enemy stats based on floor
+        const healthBonus = Math.floor(floor * 0.8); // More health per floor
+        const speedBonus = Math.min(floor * 0.05, 1.5); // Speed bonus caps at +1.5
+        const xpMultiplier = 1 + (floor - 1) * 0.15; // 15% more XP per floor
+        
         enemies.push({
             x: x,
             y: y,
             radius: enemyType.radius,
-            speed: enemyType.speed, // No speed scaling
-            health: enemyType.health + Math.floor(floor / 4), // Slower health scaling
-            maxHealth: enemyType.health + Math.floor(floor / 4),
+            speed: enemyType.speed + speedBonus,
+            health: enemyType.health + healthBonus,
+            maxHealth: enemyType.health + healthBonus,
             color: enemyType.color,
-            points: enemyType.points,
-            xp: enemyType.xp,
+            points: enemyType.points * Math.floor(1 + floor * 0.1),
+            xp: Math.floor(enemyType.xp * xpMultiplier),
             lastHit: 0
         });
     }
@@ -620,10 +625,14 @@ function showLevelUpScreen() {
                 .upgrade-card.selected {
                     border: 3px solid #4CAF50 !important;
                     box-shadow: 0 0 20px rgba(76, 175, 80, 0.6) !important;
-                    transform: scale(1.05) !important;
+                    transform: scale(1.02) translateY(-5px) !important;
                 }
                 .upgrade-card {
                     transition: all 0.3s ease;
+                }
+                .level-up-content {
+                    position: relative;
+                    min-height: 500px;
                 }
             `;
             document.head.appendChild(style);
@@ -666,7 +675,10 @@ function showConfirmationButton() {
         confirmBtn.id = 'confirmUpgrade';
         confirmBtn.textContent = 'Confirm Selection';
         confirmBtn.style.cssText = `
-            margin-top: 20px;
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
             padding: 12px 24px;
             font-size: 16px;
             font-family: 'Courier New', monospace;
@@ -676,6 +688,7 @@ function showConfirmationButton() {
             border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
+            z-index: 300;
         `;
         confirmBtn.addEventListener('click', confirmUpgrade);
         document.getElementById('levelUpScreen').appendChild(confirmBtn);
