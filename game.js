@@ -416,23 +416,6 @@ function autoShoot() {
         lastShotTime = currentTime;
     }
 } 
-    
-    const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-    const isCrit = Math.random() < playerStats.critChance;
-    
-    // Handle different bullet types
-    if (playerStats.bulletType === 'rapid') {
-        // Shoot 3 bullets in a spread
-        for (let i = -1; i <= 1; i++) {
-            const spreadAngle = angle + (i * 0.2);
-            createBullet(spreadAngle, isCrit);
-        }
-    } else {
-        createBullet(angle, isCrit);
-    }
-    
-    lastShotTime = currentTime;
-}
 
 function createBullet(angle, isCrit) {
     const bullet = {
