@@ -15,7 +15,7 @@ let player = {
     radius: 15,
     speed: 3,
     health: 50,
-    maxHealth: 100,
+    maxHealth: 50,
     color: '#4CAF50'
 };
 
