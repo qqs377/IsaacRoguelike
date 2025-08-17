@@ -33,8 +33,12 @@ let floorCompleted = false;
 // XP and Leveling system
 let playerLevel = 1;
 let currentXP = 0;
-let xpToNextLevel = 100;
+let xpToNextLevel = 50; // Reduced from 100
 let xpGainedThisLevel = 0;
+
+// Active skills and special abilities
+let activeSkills = [];
+let removedCards = new Set(); // Track removed cards
 
 // Player stats and equipment
 let playerStats = {
@@ -48,80 +52,217 @@ let playerStats = {
 
 let lastShotTime = 0;
 
-// Enemy types
+// Enemy types - Increased XP rewards, removed speed scaling
 const enemyTypes = [
-    { radius: 12, speed: 1, health: 2, color: '#FF5722', points: 10, xp: 15 },
-    { radius: 18, speed: 0.5, health: 4, color: '#9C27B0', points: 25, xp: 30 },
-    { radius: 10, speed: 2, health: 1, color: '#FFC107', points: 5, xp: 10 },
-    { radius: 25, speed: 0.3, health: 8, color: '#607D8B', points: 50, xp: 50 }
+    { radius: 12, speed: 1, health: 2, color: '#FF5722', points: 10, xp: 25 },
+    { radius: 18, speed: 0.5, health: 4, color: '#9C27B0', points: 25, xp: 40 },
+    { radius: 10, speed: 2, health: 1, color: '#FFC107', points: 5, xp: 15 },
+    { radius: 25, speed: 0.3, health: 8, color: '#607D8B', points: 50, xp: 70 }
 ];
 
-// Upgrade card definitions
+// Upgrade card definitions with rarity system
 const upgradeCards = [
+    // Common Cards
     {
-        id: 'health',
+        id: 'health_small',
         name: 'Vitality',
         icon: '❤️',
-        description: 'Increases your survivability',
+        rarity: 'common',
+        description: 'Small health improvements',
         variants: [
-            { name: 'Health Boost', effect: () => { player.health = Math.min(player.maxHealth, player.health + 30); }, display: '+30 Health' },
-            { name: 'Max Health Up', effect: () => { player.maxHealth += 20; player.health += 20; }, display: '+20 Max Health' },
-            { name: 'Armor Plating', effect: () => { playerStats.armor += 2; }, display: '+2 Armor' }
+            { name: 'Health Boost', effect: () => { player.health = Math.min(player.maxHealth, player.health + 15); }, display: '+15 Health' },
+            { name: 'Tough Skin', effect: () => { playerStats.armor += 1; }, display: '+1 Armor' }
         ]
     },
     {
-        id: 'speed',
-        name: 'Agility',
-        icon: '💨',
-        description: 'Increases movement or projectile speed',
-        variants: [
-            { name: 'Swift Feet', effect: () => { player.speed += 1; }, display: '+1 Movement Speed' },
-            { name: 'Faster Bullets', effect: () => { playerStats.bulletSpeed += 3; }, display: '+3 Bullet Speed' },
-            { name: 'Quick Reload', effect: () => { playerStats.fireRate = Math.max(2, playerStats.fireRate - 3); }, display: 'Much Faster Shooting' }
-        ]
-    },
-    {
-        id: 'damage',
+        id: 'damage_small',
         name: 'Power',
         icon: '⚔️',
-        description: 'Increases your damage output',
+        rarity: 'common',
+        description: 'Small damage improvements',
         variants: [
-            { name: 'Sharp Blade', effect: () => { playerStats.damage += 0.8; }, display: '+0.8 Damage' },
-            { name: 'Heavy Strike', effect: () => { playerStats.damage += 1.2; }, display: '+1.2 Damage' },
-            { name: 'Berserker', effect: () => { playerStats.damage += 0.5; playerStats.fireRate = Math.max(2, playerStats.fireRate - 1); }, display: '+0.5 Damage, Faster Shooting' }
+            { name: 'Sharp Edge', effect: () => { playerStats.damage += 0.3; }, display: '+0.3 Damage' },
+            { name: 'Quick Strike', effect: () => { playerStats.damage += 0.2; playerStats.fireRate = Math.max(2, playerStats.fireRate - 1); }, display: '+0.2 Damage, Faster Shooting' }
         ]
     },
     {
-        id: 'defense',
-        name: 'Defense',
-        icon: '🛡️',
-        description: 'Improves your defensive capabilities',
+        id: 'speed_small',
+        name: 'Agility',
+        icon: '💨',
+        rarity: 'common',
+        description: 'Small speed improvements',
         variants: [
-            { name: 'Iron Skin', effect: () => { playerStats.armor += 3; }, display: '+3 Armor' },
-            { name: 'Reinforced Plating', effect: () => { playerStats.armor += 2; player.maxHealth += 15; player.health += 15; }, display: '+2 Armor, +15 Max Health' },
-            { name: 'Damage Reduction', effect: () => { playerStats.armor += 1; player.speed += 0.3; }, display: '+1 Armor, +0.3 Speed' }
+            { name: 'Light Steps', effect: () => { player.speed += 0.5; }, display: '+0.5 Movement Speed' },
+            { name: 'Quick Draw', effect: () => { playerStats.fireRate = Math.max(2, playerStats.fireRate - 2); }, display: 'Faster Shooting' }
+        ]
+    },
+    
+    // Rare Cards
+    {
+        id: 'health_medium',
+        name: 'Greater Vitality',
+        icon: '💗',
+        rarity: 'rare',
+        description: 'Medium health improvements',
+        variants: [
+            { name: 'Max Health Up', effect: () => { const increase = 25; player.maxHealth += increase; player.health += increase; }, display: '+25 Max Health' },
+            { name: 'Fortified', effect: () => { playerStats.armor += 2; const heal = 15; player.health = Math.min(player.maxHealth, player.health + heal); }, display: '+2 Armor, +15 Health' }
         ]
     },
     {
-        id: 'critical',
+        id: 'damage_medium',
+        name: 'Greater Power',
+        icon: '⚡',
+        rarity: 'rare',
+        description: 'Medium damage improvements',
+        variants: [
+            { name: 'Heavy Strike', effect: () => { playerStats.damage += 0.7; }, display: '+0.7 Damage' },
+            { name: 'Berserker', effect: () => { playerStats.damage += 0.5; playerStats.fireRate = Math.max(2, playerStats.fireRate - 2); }, display: '+0.5 Damage, Much Faster Shooting' }
+        ]
+    },
+    {
+        id: 'critical_rare',
         name: 'Precision',
         icon: '🎯',
-        description: 'Improves critical hit capabilities',
+        rarity: 'rare',
+        description: 'Critical hit improvements',
         variants: [
-            { name: 'Sharp Eye', effect: () => { playerStats.critChance += 0.08; }, display: '+8% Critical Chance' },
-            { name: 'Deadly Aim', effect: () => { playerStats.critChance += 0.05; playerStats.damage += 0.3; }, display: '+5% Crit, +0.3 Damage' },
-            { name: 'Lucky Shot', effect: () => { playerStats.critChance += 0.12; playerStats.bulletSpeed += 1; }, display: '+12% Crit, +1 Bullet Speed' }
+            { name: 'Sharp Eye', effect: () => { playerStats.critChance += 0.10; }, display: '+10% Critical Chance' },
+            { name: 'Deadly Aim', effect: () => { playerStats.critChance += 0.07; playerStats.damage += 0.4; }, display: '+7% Crit, +0.4 Damage' }
         ]
     },
     {
-        id: 'special_bullet',
-        name: 'Special Ammo',
-        icon: '🔥',
-        description: 'Upgrades your bullet type',
+        id: 'healing',
+        name: 'Restoration',
+        icon: '✨',
+        rarity: 'rare',
+        description: 'Healing abilities',
         variants: [
-            { name: 'Explosive Rounds', effect: () => { playerStats.bulletType = 'explosive'; playerStats.damage += 0.5; }, display: 'Explosive Bullets, +0.5 Damage' },
-            { name: 'Piercing Shots', effect: () => { playerStats.bulletType = 'piercing'; playerStats.damage += 0.3; }, display: 'Piercing Bullets, +0.3 Damage' },
-            { name: 'Rapid Fire', effect: () => { playerStats.bulletType = 'rapid'; playerStats.fireRate = Math.max(1, Math.floor(playerStats.fireRate / 2)); }, display: 'Multi-shot Bullets' }
+            { name: 'Greater Heal', effect: () => { player.health = Math.min(player.maxHealth, player.health + 40); }, display: '+40 Health' },
+            { name: 'Regeneration Boost', effect: () => { player.health = Math.min(player.maxHealth, player.health + 25); player.maxHealth += 10; player.health += 10; }, display: '+25 Health, +10 Max Health' }
+        ]
+    },
+    
+    // Epic Cards
+    {
+        id: 'health_large',
+        name: 'Supreme Vitality',
+        icon: '💖',
+        rarity: 'epic',
+        description: 'Large health improvements',
+        variants: [
+            { name: 'Massive Health Up', effect: () => { const increase = 40; player.maxHealth += increase; player.health += increase; }, display: '+40 Max Health' },
+            { name: 'Iron Constitution', effect: () => { playerStats.armor += 4; const heal = 30; player.health = Math.min(player.maxHealth, player.health + heal); }, display: '+4 Armor, +30 Health' }
+        ]
+    },
+    {
+        id: 'damage_large',
+        name: 'Supreme Power',
+        icon: '💥',
+        rarity: 'epic',
+        description: 'Large damage improvements',
+        variants: [
+            { name: 'Devastating Strike', effect: () => { playerStats.damage += 1.2; }, display: '+1.2 Damage' },
+            { name: 'Fury', effect: () => { playerStats.damage += 0.8; playerStats.fireRate = Math.max(1, Math.floor(playerStats.fireRate * 0.6)); }, display: '+0.8 Damage, Much Faster Shooting' }
+        ]
+    },
+    {
+        id: 'critical_epic',
+        name: 'Master Precision',
+        icon: '🏹',
+        rarity: 'epic',
+        description: 'Advanced critical abilities',
+        variants: [
+            { name: 'Critical Master', effect: () => { playerStats.critChance += 0.15; playerStats.bulletSpeed += 2; }, display: '+15% Crit, +2 Bullet Speed' },
+            { name: 'Lethal Precision', effect: () => { playerStats.critChance += 0.12; playerStats.damage += 0.6; }, display: '+12% Crit, +0.6 Damage' }
+        ]
+    },
+    
+    // Legendary Special Ammo (removed after selection)
+    {
+        id: 'explosive_ammo',
+        name: 'Explosive Rounds',
+        icon: '🔥',
+        rarity: 'legendary',
+        description: 'Bullets explode on impact',
+        removeAfterUse: true,
+        variants: [
+            { name: 'Explosive Rounds', effect: () => { 
+                playerStats.bulletType = 'explosive'; 
+                playerStats.damage += 0.5; 
+                addActiveSkill('explosive', '🔥', 'Explosive Rounds: Bullets explode on impact');
+            }, display: 'Explosive Bullets, +0.5 Damage' }
+        ]
+    },
+    {
+        id: 'piercing_ammo',
+        name: 'Piercing Shots',
+        icon: '🎯',
+        rarity: 'legendary',
+        description: 'Bullets pierce through enemies',
+        removeAfterUse: true,
+        variants: [
+            { name: 'Piercing Shots', effect: () => { 
+                playerStats.bulletType = 'piercing'; 
+                playerStats.damage += 0.3; 
+                addActiveSkill('piercing', '🎯', 'Piercing Shots: Bullets pierce through enemies');
+            }, display: 'Piercing Bullets, +0.3 Damage' }
+        ]
+    },
+    {
+        id: 'rapid_ammo',
+        name: 'Rapid Fire',
+        icon: '💨',
+        rarity: 'legendary',
+        description: 'Shoots multiple bullets',
+        removeAfterUse: true,
+        variants: [
+            { name: 'Rapid Fire', effect: () => { 
+                playerStats.bulletType = 'rapid'; 
+                playerStats.fireRate = Math.max(1, Math.floor(playerStats.fireRate / 2)); 
+                addActiveSkill('rapid', '💨', 'Rapid Fire: Shoots 3 bullets at once');
+            }, display: 'Multi-shot Bullets' }
+        ]
+    },
+    
+    // Legendary Special Skills (removed after selection)
+    {
+        id: 'lifesteal',
+        name: 'Vampiric',
+        icon: '🧛',
+        rarity: 'legendary',
+        description: 'Life steal ability',
+        removeAfterUse: true,
+        variants: [
+            { name: 'Vampiric', effect: () => { 
+                addActiveSkill('lifesteal', '🧛', 'Vampiric: Killing enemies heals 8 health');
+            }, display: 'Killing enemies heals 8 health' }
+        ]
+    },
+    {
+        id: 'regeneration',
+        name: 'Meditation',
+        icon: '🧘',
+        rarity: 'legendary',
+        description: 'Regeneration when stationary',
+        removeAfterUse: true,
+        variants: [
+            { name: 'Meditation', effect: () => { 
+                addActiveSkill('regeneration', '🧘', 'Meditation: Slowly heal when not moving');
+            }, display: 'Slowly heal when not moving' }
+        ]
+    },
+    {
+        id: 'dodge',
+        name: 'Evasion',
+        icon: '👻',
+        rarity: 'legendary',
+        description: 'Chance to dodge attacks',
+        removeAfterUse: true,
+        variants: [
+            { name: 'Evasion', effect: () => { 
+                addActiveSkill('dodge', '👻', 'Evasion: 5% chance to dodge attacks');
+            }, display: '5% chance to dodge attacks' }
         ]
     }
 ];
@@ -148,22 +289,11 @@ function setupEventListeners() {
         keys[e.key.toLowerCase()] = false;
     });
     
-    // Mouse events
+    // Mouse events for aiming only
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
         mouse.x = e.clientX - rect.left;
         mouse.y = e.clientY - rect.top;
-    });
-    
-    canvas.addEventListener('mousedown', (e) => {
-        if (gameState === 'playing') {
-            mouse.down = true;
-            shootBullet();
-        }
-    });
-    
-    canvas.addEventListener('mouseup', () => {
-        mouse.down = false;
     });
     
     // UI buttons
@@ -206,8 +336,10 @@ function resetGame() {
     // Reset XP and level
     playerLevel = 1;
     currentXP = 0;
-    xpToNextLevel = 100;
+    xpToNextLevel = 50; // Reset to initial value
     xpGainedThisLevel = 0;
+    activeSkills = [];
+    removedCards = new Set();
     
     bullets = [];
     enemies = [];
@@ -240,9 +372,9 @@ function generateFloor() {
             x: x,
             y: y,
             radius: enemyType.radius,
-            speed: enemyType.speed + (floor - 1) * 0.1,
-            health: enemyType.health + Math.floor(floor / 3),
-            maxHealth: enemyType.health + Math.floor(floor / 3),
+            speed: enemyType.speed, // No speed scaling
+            health: enemyType.health + Math.floor(floor / 4), // Slower health scaling
+            maxHealth: enemyType.health + Math.floor(floor / 4),
             color: enemyType.color,
             points: enemyType.points,
             xp: enemyType.xp,
@@ -259,9 +391,31 @@ function nextFloor() {
     generateFloor();
 }
 
-function shootBullet() {
+// Auto-shooting function
+let autoShootTimer = 0;
+
+function autoShoot() {
     const currentTime = Date.now();
-    if (currentTime - lastShotTime < playerStats.fireRate * 16.67) return; // Convert frames to milliseconds
+    if (currentTime - lastShotTime < playerStats.fireRate * 16.67) return;
+    
+    if (enemies.length > 0) { // Only shoot if there are enemies
+        const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+        const isCrit = Math.random() < playerStats.critChance;
+        
+        // Handle different bullet types
+        if (playerStats.bulletType === 'rapid') {
+            // Shoot 3 bullets in a spread
+            for (let i = -1; i <= 1; i++) {
+                const spreadAngle = angle + (i * 0.2);
+                createBullet(spreadAngle, isCrit);
+            }
+        } else {
+            createBullet(angle, isCrit);
+        }
+        
+        lastShotTime = currentTime;
+    }
+} to milliseconds
     
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     const isCrit = Math.random() < playerStats.critChance;
@@ -322,7 +476,7 @@ function gainXP(amount) {
 function levelUp() {
     playerLevel++;
     currentXP -= xpToNextLevel;
-    xpToNextLevel = Math.floor(xpToNextLevel * 1.5); // Increase XP requirement by 50%
+    xpToNextLevel = Math.floor(xpToNextLevel * 1.3); // Reduced from 1.5 to 1.3
     xpGainedThisLevel = 0;
     
     // Pause the game and show level up screen
@@ -330,16 +484,68 @@ function levelUp() {
     showLevelUpScreen();
 }
 
+// Rarity weights for card selection
+const rarityWeights = {
+    common: 50,
+    rare: 25,
+    epic: 15,
+    legendary: 10
+};
+
+function getRandomRarity() {
+    const totalWeight = Object.values(rarityWeights).reduce((sum, weight) => sum + weight, 0);
+    let random = Math.random() * totalWeight;
+    
+    for (const [rarity, weight] of Object.entries(rarityWeights)) {
+        random -= weight;
+        if (random <= 0) return rarity;
+    }
+    return 'common';
+}
+
+function addActiveSkill(id, icon, description) {
+    if (!activeSkills.find(skill => skill.id === id)) {
+        activeSkills.push({ id, icon, description });
+        updateActiveSkillsDisplay();
+    }
+}
+
+function updateActiveSkillsDisplay() {
+    const activeSkillsContainer = document.getElementById('activeSkills');
+    activeSkillsContainer.innerHTML = '';
+    
+    activeSkills.forEach(skill => {
+        const skillIcon = document.createElement('div');
+        skillIcon.className = 'skill-icon legendary';
+        skillIcon.innerHTML = `
+            ${skill.icon}
+            <div class="tooltip">${skill.description}</div>
+        `;
+        activeSkillsContainer.appendChild(skillIcon);
+    });
+}
+
 function showLevelUpScreen() {
-    // Generate 5 random upgrade options
-    const availableCards = [...upgradeCards];
+    // Filter out removed cards
+    const availableCards = upgradeCards.filter(card => !removedCards.has(card.id));
     const cardOptions = [];
     
     for (let i = 0; i < 5; i++) {
         if (availableCards.length === 0) break;
         
-        const randomIndex = Math.floor(Math.random() * availableCards.length);
-        const baseCard = availableCards[randomIndex];
+        // Get random rarity based on weights
+        const targetRarity = getRandomRarity();
+        let possibleCards = availableCards.filter(card => card.rarity === targetRarity);
+        
+        // Fallback to any available card if no cards of target rarity
+        if (possibleCards.length === 0) {
+            possibleCards = availableCards;
+        }
+        
+        if (possibleCards.length === 0) break;
+        
+        const randomIndex = Math.floor(Math.random() * possibleCards.length);
+        const baseCard = possibleCards[randomIndex];
         
         // Pick a random variant
         const randomVariant = baseCard.variants[Math.floor(Math.random() * baseCard.variants.length)];
@@ -352,8 +558,9 @@ function showLevelUpScreen() {
             effectDisplay: randomVariant.display
         });
         
-        // Remove card to avoid duplicates (comment this out if you want potential duplicates)
-        // availableCards.splice(randomIndex, 1);
+        // Remove card temporarily to avoid duplicates in this selection
+        const cardIndex = availableCards.indexOf(baseCard);
+        availableCards.splice(cardIndex, 1);
     }
     
     // Show the level up screen
@@ -362,13 +569,11 @@ function showLevelUpScreen() {
     
     // Clear previous cards
     cardContainer.innerHTML = '';
-
-    let selectedCard = null;
     
     // Create card elements
     cardOptions.forEach((card, index) => {
         const cardElement = document.createElement('div');
-        cardElement.className = 'upgrade-card';
+        cardElement.className = `upgrade-card ${card.rarity}`;
         cardElement.innerHTML = `
             <div class="card-icon">${card.icon}</div>
             <div class="card-title">${card.displayName}</div>
@@ -377,28 +582,11 @@ function showLevelUpScreen() {
         `;
         
         cardElement.addEventListener('click', () => {
-            // Remove highlight from all cards
-            document.querySelectorAll('.upgrade-card').forEach(el => el.classList.remove('selected'));
-            // Highlight the clicked card
-            cardElement.classList.add('selected');
-            selectedCard = card;
+            selectUpgrade(card);
         });
         
         cardContainer.appendChild(cardElement);
     });
-
-    // Create Confirm button
-    const confirmBtn = document.createElement('button');
-    confirmBtn.textContent = "Confirm Selection";
-    confirmBtn.className = 'confirm-button';
-    confirmBtn.addEventListener('click', () => {
-        if (!selectedCard) {
-            alert("Please select a card first!");
-            return;
-        }
-        selectUpgrade(selectedCard);
-    });
-    cardContainer.appendChild(confirmBtn);
     
     levelUpScreen.style.display = 'flex';
 }
@@ -406,6 +594,11 @@ function showLevelUpScreen() {
 function selectUpgrade(card) {
     // Apply the upgrade effect
     card.effect();
+    
+    // Remove card from pool if it's a special card
+    if (card.removeAfterUse) {
+        removedCards.add(card.id);
+    }
     
     // Hide level up screen and resume game
     document.getElementById('levelUpScreen').style.display = 'none';
@@ -415,13 +608,19 @@ function selectUpgrade(card) {
     updateUI();
 }
 
+// Player movement and regeneration tracking
+let playerLastPosition = { x: 400, y: 300 };
+let standingStillTime = 0;
+
 function update() {
     if (gameState !== 'playing') return;
     
     updatePlayer();
+    autoShoot(); // Auto-shooting
     updateBullets();
     updateEnemies();
     updateParticles();
+    updateSpecialSkills();
     checkCollisions();
     render();
     updateUI();
@@ -434,6 +633,27 @@ function update() {
         floorCompleted = true;
         score += floor * 100; // Bonus for completing floor
     }
+}
+
+function updateSpecialSkills() {
+    // Check if player is standing still for regeneration
+    const currentPos = { x: player.x, y: player.y };
+    const distance = Math.hypot(currentPos.x - playerLastPosition.x, currentPos.y - playerLastPosition.y);
+    
+    if (distance < 0.5) { // Player is standing still
+        standingStillTime++;
+        
+        // Regeneration skill: heal slowly when not moving
+        if (activeSkills.find(skill => skill.id === 'regeneration') && standingStillTime > 60) { // After 1 second
+            if (standingStillTime % 30 === 0) { // Every 0.5 seconds
+                player.health = Math.min(player.maxHealth, player.health + 1);
+            }
+        }
+    } else {
+        standingStillTime = 0;
+    }
+    
+    playerLastPosition = { ...currentPos };
 }
 
 function updatePlayer() {
@@ -534,6 +754,12 @@ function checkCollisions() {
                     score += enemy.points;
                     enemiesKilled++;
                     gainXP(enemy.xp); // Gain XP from killed enemy
+                    
+                    // Lifesteal skill: heal on kill
+                    if (activeSkills.find(skill => skill.id === 'lifesteal')) {
+                        player.health = Math.min(player.maxHealth, player.health + 8);
+                    }
+                    
                     createParticles(enemy.x, enemy.y, enemy.color, 10);
                     enemies.splice(enemyIndex, 1);
                 }
@@ -541,13 +767,20 @@ function checkCollisions() {
         });
     });
     
-    // Player-enemy collisions
+    // Player-enemy collisions with dodge chance
     enemies.forEach(enemy => {
         const dx = player.x - enemy.x;
         const dy = player.y - enemy.y;
         const distance = Math.hypot(dx, dy);
         
         if (distance < player.radius + enemy.radius) {
+            // Check for dodge skill
+            if (activeSkills.find(skill => skill.id === 'dodge') && Math.random() < 0.05) {
+                // Dodge successful - create dodge particles and skip damage
+                createParticles(player.x, player.y, '#00FFFF', 5);
+                return;
+            }
+            
             // Calculate damage after armor
             const damage = Math.max(0.1, 1.0 - playerStats.armor * 0.15);
             player.health -= damage;
