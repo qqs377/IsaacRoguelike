@@ -415,7 +415,7 @@ function autoShoot() {
         
         lastShotTime = currentTime;
     }
-} to milliseconds
+} 
     
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     const isCrit = Math.random() < playerStats.critChance;
