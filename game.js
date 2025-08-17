@@ -179,11 +179,11 @@ const upgradeCards = [
     },
     
     // Legendary Special Ammo (removed after selection)
-{
+    {
         id: 'explosive_ammo',
         name: 'Explosive Rounds',
         icon: '🔥',
-        rarity: 'epic',
+        rarity: 'legendary',
         description: 'Bullets explode on impact',
         removeAfterUse: true,
         variants: [
@@ -198,7 +198,7 @@ const upgradeCards = [
         id: 'piercing_ammo',
         name: 'Piercing Shots',
         icon: '🎯',
-        rarity: 'epic',
+        rarity: 'legendary',
         description: 'Bullets pierce through enemies',
         removeAfterUse: true,
         variants: [
@@ -213,7 +213,7 @@ const upgradeCards = [
         id: 'rapid_ammo',
         name: 'Rapid Fire',
         icon: '💨',
-        rarity: 'epic',
+        rarity: 'legendary',
         description: 'Shoots multiple bullets',
         removeAfterUse: true,
         variants: [
@@ -317,11 +317,23 @@ function setupEventListeners() {
         keys[e.key.toLowerCase()] = false;
     });
     
-    // Mouse events for aiming only
+    // Mouse events for aiming and shooting
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
         mouse.x = e.clientX - rect.left;
         mouse.y = e.clientY - rect.top;
+    });
+    
+    // Mouse click for shooting
+    canvas.addEventListener('mousedown', (e) => {
+        if (gameState === 'playing') {
+            mouse.down = true;
+            shoot();
+        }
+    });
+    
+    canvas.addEventListener('mouseup', (e) => {
+        mouse.down = false;
     });
     
     // UI buttons
@@ -419,30 +431,26 @@ function nextFloor() {
     generateFloor();
 }
 
-// Auto-shooting function
-let autoShootTimer = 0;
-
-function autoShoot() {
+// Manual shooting function - replaces autoShoot
+function shoot() {
     const currentTime = Date.now();
     if (currentTime - lastShotTime < playerStats.fireRate * 16.67) return;
     
-    if (enemies.length > 0) { // Only shoot if there are enemies
-        const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-        const isCrit = Math.random() < playerStats.critChance;
-        
-        // Handle different bullet types
-        if (playerStats.bulletType === 'rapid') {
-            // Shoot 3 bullets in a spread - each inherits the current bullet type effects
-            for (let i = -1; i <= 1; i++) {
-                const spreadAngle = angle + (i * 0.2);
-                createBullet(spreadAngle, isCrit, true); // Pass true to indicate this is from rapid fire
-            }
-        } else {
-            createBullet(angle, isCrit, false);
+    const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+    const isCrit = Math.random() < playerStats.critChance;
+    
+    // Handle different bullet types
+    if (playerStats.bulletType === 'rapid') {
+        // Shoot 3 bullets in a spread - each inherits the current bullet type effects
+        for (let i = -1; i <= 1; i++) {
+            const spreadAngle = angle + (i * 0.2);
+            createBullet(spreadAngle, isCrit, true); // Pass true to indicate this is from rapid fire
         }
-        
-        lastShotTime = currentTime;
+    } else {
+        createBullet(angle, isCrit, false);
     }
+    
+    lastShotTime = currentTime;
 }
 
 function createBullet(angle, isCrit, isRapidFire = false) {
@@ -467,7 +475,7 @@ function createBullet(angle, isCrit, isRapidFire = false) {
         type: actualBulletType,
         color: getBulletColor(isCrit),
         pierced: 0,
-        // Add properties to track combined effects
+        // Add properties to track combined effects - PRESERVED PIERCING LOGIC
         canPierce: activeSkills.find(skill => skill.id === 'piercing') !== undefined,
         canExplode: activeSkills.find(skill => skill.id === 'explosive') !== undefined
     };
@@ -509,10 +517,10 @@ function levelUp() {
 
 // Rarity weights for card selection
 const rarityWeights = {
-    common: 50,
+    common: 64,
     rare: 25,
-    epic: 15,
-    legendary: 5
+    epic: 10,
+    legendary: 1
 };
 
 function getRandomRarity() {
@@ -639,7 +647,7 @@ function update() {
     if (gameState !== 'playing') return;
     
     updatePlayer();
-    autoShoot(); // Auto-shooting
+    // REMOVED autoShoot() call - now using manual shooting
     updateBullets();
     updateEnemies();
     updateParticles();
@@ -759,7 +767,7 @@ function checkCollisions() {
                 // Create hit particles
                 createParticles(enemy.x, enemy.y, bullet.isCrit ? '#FF0000' : enemy.color);
                 
-                // Handle special bullet effects - can now combine
+                // Handle special bullet effects - can now combine - PRESERVING PIERCING FOR ALL BULLETS
                 let removeBullet = true;
                 
                 if (bullet.canExplode || bullet.type === 'explosive') {
