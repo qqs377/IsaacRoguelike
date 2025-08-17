@@ -14,7 +14,7 @@ let player = {
     y: 300,
     radius: 15,
     speed: 3,
-    health: 10,
+    health: 50,
     maxHealth: 100,
     color: '#4CAF50'
 };
