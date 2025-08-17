@@ -534,9 +534,9 @@ function levelUp() {
 
 // Rarity weights for card selection
 const rarityWeights = {
-    common: 84,
-    rare: 10,
-    epic: 5,
+    common: 59,
+    rare: 30,
+    epic: 10,
     legendary: 1
 };
 
